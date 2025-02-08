@@ -1,0 +1,14 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./tmp/uploads:/tmp/uploads
+      - ./tmp/results:/tmp/results
+      - ./models:/app/models
+    environment:
+      - FLASK_APP=app.main
+      - FLASK_ENV=development
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped 

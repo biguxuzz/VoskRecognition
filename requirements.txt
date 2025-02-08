@@ -1,0 +1,9 @@
+flask==2.0.1
+werkzeug==2.0.1
+vosk==0.3.42
+soundfile==0.10.3.post1
+numpy==1.21.2
+pytest==6.2.5
+selenium==3.141.0
+pytest-flask==1.2.0
+wget==3.2 

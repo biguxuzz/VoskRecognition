@@ -1,0 +1,28 @@
+speech-recognition-portal/
+├── Dockerfile
+├── docker-compose.yml
+├── requirements.txt
+├── LICENSE
+├── README.md
+├── app/
+│   ├── __init__.py
+│   ├── main.py
+│   ├── config.py
+│   ├── audio_processor.py
+│   ├── speech_recognizer.py
+│   ├── model_manager.py
+│   ├── static/
+│   │   ├── css/
+│   │   │   └── style.css
+│   │   ├── js/
+│   │   │   └── main.js
+│   │   └── images/
+│   │       └── upload.svg
+│   └── templates/
+│       ├── base.html
+│       └── index.html
+└── tests/
+    ├── __init__.py
+    ├── test_audio_processor.py
+    ├── test_speech_recognizer.py
+    └── test_web_interface.py 
