@@ -40,4 +40,7 @@ models/
 *.mp4
 
 # Logs
-*.log 
+*.log
+
+# Environment variables
+.env 

@@ -1,9 +1,17 @@
 flask==2.0.1
-werkzeug==2.0.1
-vosk==0.3.42
-soundfile==0.10.3.post1
-numpy==1.21.2
+werkzeug==2.0.3
+openai-whisper
+torch
+torchaudio
+numpy>=2.0.0
+pandas
+transformers
+ffmpeg-python
 pytest==6.2.5
 selenium==3.141.0
 pytest-flask==1.2.0
-wget==3.2 
+wget==3.2
+# torch и связанные пакеты будут установлены отдельно в Dockerfile
+pyannote.audio>=3.1.1
+python-dotenv==1.0.0
+speechbrain>=1.0.0 

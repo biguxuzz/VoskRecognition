@@ -1,8 +1,11 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class Config:
-    UPLOAD_FOLDER = '/tmp/uploads'
-    RESULT_FOLDER = '/tmp/results'
+    UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', '/data/uploads')
+    RESULT_FOLDER = os.getenv('RESULT_FOLDER', '/data/results')
     ALLOWED_EXTENSIONS = {'wav', 'mp3', 'mp4'}
     MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500MB
 

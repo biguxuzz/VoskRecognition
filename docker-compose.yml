@@ -1,14 +1,35 @@
+name: whisper-recognition
 services:
   web:
-    build: .
+    container_name: whisper-web
+    build: 
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "5000:5000"
     volumes:
-      - ./tmp/uploads:/tmp/uploads
-      - ./tmp/results:/tmp/results
-      - ./models:/app/models
+      - ./app:/app/app
+      - whisper_data:/data
+      - whisper_cache:/root/.cache/whisper
+    runtime: nvidia
+    env_file:
+      - .env
     environment:
-      - FLASK_APP=app.main
-      - FLASK_ENV=development
-      - PYTHONUNBUFFERED=1
-    restart: unless-stopped 
+      - NVIDIA_VISIBLE_DEVICES=all
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+      - CUDA_LAUNCH_BLOCKING=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu, compute, utility]
+    restart: unless-stopped
+
+volumes:
+  whisper_data:
+    name: whisper_data
+  whisper_cache:
+    name: whisper_cache 

@@ -9,6 +9,9 @@ class SpeechRecognitionApp {
         this.statusText = document.querySelector('.status-text');
         this.downloadButton = document.getElementById('downloadButton');
         
+        this.currentTaskId = null;
+        this.progressCheckInterval = null;
+        
         this.initializeEventListeners();
     }
 
@@ -52,28 +55,25 @@ class SpeechRecognitionApp {
 
     async handleFileUpload(file) {
         try {
+            // Показываем прогресс-бар
+            this.dropZone.style.display = 'none';
+            this.progressContainer.style.display = 'block';
+            this.updateProgress(0);
+            
+            // Загрузка файла
             const formData = new FormData();
             formData.append('file', file);
-
-            // Показываем прогресс
-            this.showProgress();
-            this.updateProgress('convert', 'Загрузка файла...');
-
-            // Загружаем файл
+            
             const uploadResponse = await fetch('/upload', {
                 method: 'POST',
                 body: formData
             });
-
-            if (!uploadResponse.ok) {
-                throw new Error('Ошибка загрузки файла');
-            }
-
+            
+            if (!uploadResponse.ok) throw new Error('Ошибка загрузки файла');
+            
             const uploadResult = await uploadResponse.json();
             
             // Начинаем распознавание
-            this.updateProgress('recognize', 'Распознавание речи...');
-            
             const recognizeResponse = await fetch('/recognize', {
                 method: 'POST',
                 headers: {
@@ -83,50 +83,74 @@ class SpeechRecognitionApp {
                     filename: uploadResult.filename
                 })
             });
-
-            if (!recognizeResponse.ok) {
-                throw new Error('Ошибка распознавания');
-            }
-
-            const recognizeResult = await recognizeResponse.json();
             
-            // Показываем результат
-            this.updateProgress('complete', 'Готово!');
-            this.showResult(recognizeResult.result_file);
-
+            if (!recognizeResponse.ok) throw new Error('Ошибка распознавания');
+            
+            const recognizeResult = await recognizeResponse.json();
+            this.currentTaskId = recognizeResult.task_id;
+            
+            // Запускаем проверку прогресса
+            this.startProgressCheck();
+            
         } catch (error) {
             this.showError(error.message);
         }
     }
 
-    showProgress() {
-        this.dropZone.style.display = 'none';
-        this.progressContainer.style.display = 'block';
-        this.resultContainer.style.display = 'none';
+    startProgressCheck() {
+        if (this.progressCheckInterval) {
+            clearInterval(this.progressCheckInterval);
+        }
+        
+        this.progressCheckInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/status/${this.currentTaskId}`);
+                if (!response.ok) throw new Error('Ошибка получения статуса');
+                
+                const status = await response.json();
+                
+                // Обновляем прогресс
+                if (status.progress !== undefined) {
+                    this.updateProgress(status.progress);
+                    console.log(`Progress updated: ${status.progress}%`);
+                }
+                
+                // Проверяем завершение
+                if (status.status === 'completed') {
+                    clearInterval(this.progressCheckInterval);
+                    this.showResult(status.result_file);
+                    console.log('Processing completed');
+                } else if (status.status === 'error') {
+                    clearInterval(this.progressCheckInterval);
+                    this.showError(status.error);
+                    console.error('Processing error:', status.error);
+                }
+                
+            } catch (error) {
+                clearInterval(this.progressCheckInterval);
+                this.showError(error.message);
+                console.error('Progress check error:', error);
+            }
+        }, 500);  // Проверяем каждые 500мс вместо 1000мс
     }
 
-    updateProgress(step, text) {
-        const steps = ['convert', 'split', 'recognize', 'complete'];
-        const currentIndex = steps.indexOf(step);
-        
-        // Обновляем прогресс-бар
-        const progress = (currentIndex + 1) / steps.length * 100;
+    updateProgress(progress) {
         this.progressFill.style.width = `${progress}%`;
+        this.statusText.textContent = `Обработано ${Math.round(progress)}%`;
         
-        // Обновляем текст статуса
-        this.statusText.textContent = text;
+        // Обновляем статус шагов
+        const steps = document.querySelectorAll('.step');
+        const currentStep = Math.floor(progress / 25);  // 4 шага по 25%
         
-        // Обновляем статусы шагов
-        steps.forEach((s, index) => {
-            const stepElement = document.querySelector(`[data-step="${s}"]`);
-            if (index < currentIndex) {
-                stepElement.classList.add('complete');
-                stepElement.classList.remove('active');
-            } else if (index === currentIndex) {
-                stepElement.classList.add('active');
-                stepElement.classList.remove('complete');
+        steps.forEach((step, index) => {
+            if (index < currentStep) {
+                step.classList.add('complete');
+                step.classList.remove('active');
+            } else if (index === currentStep) {
+                step.classList.add('active');
+                step.classList.remove('complete');
             } else {
-                stepElement.classList.remove('active', 'complete');
+                step.classList.remove('active', 'complete');
             }
         });
     }
