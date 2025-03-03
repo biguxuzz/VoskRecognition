@@ -13,7 +13,9 @@
 ## 🚀 Возможности / Features
 
 ### 🇷🇺 Возможности
-- Загрузка файлов большого размера (`.wav`, `.mp3`, `.mp4`)
+- Загрузка нескольких файлов большого размера (`.wav`, `.mp3`, `.mp4`)
+- Возможность изменения порядка файлов перед объединением
+- Автоматическое объединение нескольких файлов в один
 - Автоматическая конвертация аудио в формат `.wav`
 - Двухэтапное распознавание:
   1. Транскрибация речи с таймкодами
@@ -25,7 +27,9 @@
 - Автоматические тесты
 
 ### 🇬🇧 Features
-- Upload large files (`.wav`, `.mp3`, `.mp4`)
+- Upload multiple large files (`.wav`, `.mp3`, `.mp4`)
+- Ability to change file order before merging
+- Automatic merging of multiple files into one
 - Automatic audio conversion to `.wav`
 - Two-stage recognition:
   1. Speech transcription with timestamps
@@ -43,8 +47,8 @@
 ### 🇷🇺 Установка
 ```bash
 # Клонировать репозиторий
-git clone https://github.com/biguxuzz/speech-recognition-portal.git
-cd speech-recognition-portal
+git clone https://github.com/biguxuzz/VoskRecognition.git
+cd VoskRecognition
 
 # Собрать и запустить контейнер Docker
 docker-compose up --build
@@ -53,8 +57,8 @@ docker-compose up --build
 ### 🇬🇧 Installation
 ```bash
 # Clone repository
-git clone https://github.com/biguxuzz/speech-recognition-portal.git
-cd speech-recognition-portal
+git clone https://github.com/biguxuzz/VoskRecognition.git
+cd VoskRecognition
 
 # Build and run Docker container
 docker-compose up --build
