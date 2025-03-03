@@ -57,8 +57,6 @@ class SpeechRecognitionApp {
         try {
             // Показываем прогресс-бар
             this.dropZone.style.display = 'none';
-            this.progressContainer.style.display = 'block';
-            this.updateProgress(0);
             
             // Загрузка файла
             const formData = new FormData();
@@ -73,27 +71,21 @@ class SpeechRecognitionApp {
             
             const uploadResult = await uploadResponse.json();
             
-            // Начинаем распознавание
-            const recognizeResponse = await fetch('/recognize', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    filename: uploadResult.filename
-                })
-            });
+            // Отображаем файл в списке файлов и отключаем прогресс-бар
+            this.dropZone.style.display = 'block';
+            this.progressContainer.style.display = 'none';
             
-            if (!recognizeResponse.ok) throw new Error('Ошибка распознавания');
+            // Добавляем файл в список, если функция доступна
+            if (typeof addFileToList === 'function') {
+                addFileToList(uploadResult.filename, file.name);
+            }
             
-            const recognizeResult = await recognizeResponse.json();
-            this.currentTaskId = recognizeResult.task_id;
-            
-            // Запускаем проверку прогресса
-            this.startProgressCheck();
+            // УДАЛЕНО: Автоматический запуск распознавания
+            // вместо этого пользователь должен нажать кнопку "Начать распознавание"
             
         } catch (error) {
             this.showError(error.message);
+            this.dropZone.style.display = 'block';
         }
     }
 

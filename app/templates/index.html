@@ -4,13 +4,24 @@
 <div class="upload-container">
     <div class="upload-area" id="dropZone">
         <form id="uploadForm" enctype="multipart/form-data">
-            <input type="file" id="fileInput" accept=".wav,.mp3,.mp4" hidden>
+            <input type="file" id="fileInput" accept=".wav,.mp3,.mp4" multiple hidden>
             <div class="upload-prompt">
                 <img src="{{ url_for('static', filename='images/upload.svg') }}" alt="Загрузить">
-                <p>Перетащите файл сюда или <span class="browse-link">выберите файл</span></p>
+                <p>Перетащите файлы сюда или <span class="browse-link">выберите файлы</span></p>
                 <p class="file-types">Поддерживаемые форматы: WAV, MP3, MP4</p>
             </div>
         </form>
+    </div>
+
+    <div class="files-list" style="display: none;">
+        <h3>Загруженные файлы</h3>
+        <div class="files-container">
+            <!-- Здесь будут отображаться загруженные файлы -->
+        </div>
+        <div class="files-actions">
+            <button id="startRecognition" class="primary-button" disabled>Начать распознавание</button>
+            <button id="clearFiles" class="secondary-button">Очистить все</button>
+        </div>
     </div>
 
     <div class="progress-container" style="display: none;">
@@ -33,4 +44,276 @@
         <button id="downloadButton" class="primary-button">Скачать результат</button>
     </div>
 </div>
+
+<style>
+.files-list {
+    margin-top: 20px;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.files-container {
+    margin: 15px 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    background: white;
+    margin: 5px 0;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.file-item .file-name {
+    flex-grow: 1;
+}
+
+.file-item .file-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.file-item .move-up,
+.file-item .move-down {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.file-item .remove-file {
+    color: #ff4444;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.files-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+#startRecognition:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+</style>
+
+<script>
+let uploadedFiles = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const filesList = document.querySelector('.files-list');
+    const filesContainer = document.querySelector('.files-container');
+    const startRecognitionBtn = document.getElementById('startRecognition');
+    const clearFilesBtn = document.getElementById('clearFiles');
+
+    // Обработка перетаскивания файлов
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+
+    // Обработка выбора файлов через диалог
+    dropZone.addEventListener('click', () => {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+
+    // Обработка файлов
+    function handleFiles(files) {
+        Array.from(files).forEach(file => {
+            if (file.type.startsWith('audio/') || file.type.startsWith('video/')) {
+                uploadFile(file);
+            }
+        });
+    }
+
+    // Загрузка файла
+    function uploadFile(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        fetch('/upload', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                return;
+            }
+            uploadedFiles.push({
+                name: data.filename,
+                originalName: file.name
+            });
+            updateFilesList();
+            startRecognitionBtn.disabled = false;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при загрузке файла');
+        });
+    }
+
+    // Обновление списка файлов
+    function updateFilesList() {
+        filesContainer.innerHTML = '';
+        uploadedFiles.forEach((file, index) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.innerHTML = `
+                <span class="file-name">${file.originalName}</span>
+                <div class="file-actions">
+                    ${index > 0 ? '<button class="move-up">↑</button>' : ''}
+                    ${index < uploadedFiles.length - 1 ? '<button class="move-down">↓</button>' : ''}
+                    <button class="remove-file">×</button>
+                </div>
+            `;
+
+            // Обработчики кнопок
+            fileItem.querySelector('.move-up')?.addEventListener('click', () => {
+                [uploadedFiles[index], uploadedFiles[index - 1]] = [uploadedFiles[index - 1], uploadedFiles[index]];
+                updateFilesList();
+            });
+
+            fileItem.querySelector('.move-down')?.addEventListener('click', () => {
+                [uploadedFiles[index], uploadedFiles[index + 1]] = [uploadedFiles[index + 1], uploadedFiles[index]];
+                updateFilesList();
+            });
+
+            fileItem.querySelector('.remove-file').addEventListener('click', () => {
+                uploadedFiles.splice(index, 1);
+                updateFilesList();
+                if (uploadedFiles.length === 0) {
+                    startRecognitionBtn.disabled = true;
+                }
+            });
+
+            filesContainer.appendChild(fileItem);
+        });
+
+        filesList.style.display = uploadedFiles.length > 0 ? 'block' : 'none';
+    }
+
+    // Очистка всех файлов
+    clearFilesBtn.addEventListener('click', () => {
+        uploadedFiles = [];
+        updateFilesList();
+        startRecognitionBtn.disabled = true;
+    });
+
+    // Начало распознавания
+    startRecognitionBtn.addEventListener('click', () => {
+        if (uploadedFiles.length === 0) {
+            console.error('No files to process');
+            return;
+        }
+
+        const files = uploadedFiles.map(f => f.name);
+        console.log('Starting recognition with files:', files);
+        
+        const requestData = { files };
+        console.log('Request data:', requestData);
+
+        fetch('/recognize', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => {
+            console.log('Response status:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('Response data:', data);
+            if (data.error) {
+                console.error('Error from server:', data.error);
+                alert(data.error);
+                return;
+            }
+            // Показать прогресс и начать отслеживание статуса
+            document.querySelector('.progress-container').style.display = 'block';
+            document.querySelector('.files-list').style.display = 'none';
+            trackProgress(data.task_id);
+        })
+        .catch(error => {
+            console.error('Error during recognition:', error);
+            alert('Ошибка при начале распознавания');
+        });
+    });
+
+    // Отслеживание прогресса
+    function trackProgress(taskId) {
+        const progressFill = document.querySelector('.progress-fill');
+        const statusText = document.querySelector('.status-text');
+        const downloadButton = document.getElementById('downloadButton');
+
+        function checkStatus() {
+            fetch(`/status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Status update:', data);
+                    
+                    if (data.status === 'completed') {
+                        progressFill.style.width = '100%';
+                        statusText.textContent = 'Готово';
+                        document.querySelector('.result-container').style.display = 'block';
+                        document.querySelector('.progress-container').style.display = 'none';
+                        
+                        // Сохраняем имя файла результата
+                        if (data.result_file) {
+                            console.log('Result file:', data.result_file);
+                            downloadButton.onclick = () => {
+                                console.log('Downloading file:', data.result_file);
+                                window.location.href = `/download/${data.result_file}`;
+                            };
+                        } else {
+                            console.error('No result file in status data');
+                        }
+                        return;
+                    } else if (data.status === 'error') {
+                        statusText.textContent = `Ошибка: ${data.error}`;
+                        return;
+                    }
+
+                    progressFill.style.width = `${data.progress}%`;
+                    statusText.textContent = `Обработка: ${data.progress}%`;
+                    setTimeout(checkStatus, 1000);
+                })
+                .catch(error => {
+                    console.error('Error checking status:', error);
+                    statusText.textContent = 'Ошибка при получении статуса';
+                });
+        }
+
+        checkStatus();
+    }
+});
+</script>
 {% endblock %} 

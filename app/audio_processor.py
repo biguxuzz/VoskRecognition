@@ -24,4 +24,32 @@ class AudioProcessor:
             subprocess.run(command, check=True, capture_output=True)
             return output_path
         except subprocess.CalledProcessError as e:
-            raise Exception(f"Ошибка конвертации файла: {e.stderr.decode()}") 
+            raise Exception(f"Ошибка конвертации файла: {e.stderr.decode()}")
+
+    def merge_wav_files(self, input_files, output_path):
+        """Объединяет несколько WAV файлов в один"""
+        try:
+            # Создаем временный файл со списком файлов для ffmpeg
+            temp_list = output_path + '.txt'
+            with open(temp_list, 'w', encoding='utf-8') as f:
+                for file in input_files:
+                    f.write(f"file '{file}'\n")
+
+            # Используем ffmpeg для объединения файлов
+            command = [
+                'ffmpeg', '-f', 'concat', '-safe', '0',
+                '-i', temp_list,
+                '-c', 'copy',
+                '-y', output_path
+            ]
+
+            subprocess.run(command, check=True, capture_output=True)
+            
+            # Удаляем временный файл
+            os.remove(temp_list)
+            
+            return output_path
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Ошибка объединения файлов: {e.stderr.decode()}")
+        except Exception as e:
+            raise Exception(f"Ошибка при объединении файлов: {str(e)}") 
