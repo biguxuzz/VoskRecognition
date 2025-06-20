@@ -48,16 +48,66 @@
 - Docker и Docker Compose
 - Минимум 4GB RAM
 - Процессор с поддержкой AVX2 (для оптимальной производительности)
+- Аккаунт на Hugging Face с токеном доступа
 
 ### 🇬🇧 Requirements
 - Docker and Docker Compose
 - Minimum 4GB RAM
 - CPU with AVX2 support (for optimal performance)
+- Hugging Face account with access token
+
+### 🇷🇺 Регистрация на Hugging Face
+
+Для работы с распознаванием спикеров необходимо:
+
+1. **Создать аккаунт на Hugging Face:**
+   - Перейдите на https://huggingface.co/join
+   - Заполните форму регистрации
+   - Подтвердите email
+
+2. **Получить токен доступа:**
+   - Войдите в аккаунт на https://huggingface.co
+   - Перейдите в Settings → Access Tokens: https://huggingface.co/settings/tokens
+   - Нажмите "New token"
+   - Введите название токена (например, "speech-recognition")
+   - Выберите роль "Read"
+   - Нажмите "Generate token"
+   - Скопируйте токен (он понадобится позже)
+
+3. **Принять условия использования моделей:**
+   Перейдите на эти страницы и нажмите "Accept":
+   - https://huggingface.co/pyannote/speaker-diarization
+   - https://huggingface.co/pyannote/segmentation
+   - https://huggingface.co/pyannote/embedding
+
+### 🇬🇧 Hugging Face Registration
+
+For speaker recognition functionality:
+
+1. **Create Hugging Face account:**
+   - Go to https://huggingface.co/join
+   - Fill out the registration form
+   - Confirm your email
+
+2. **Get access token:**
+   - Log in to https://huggingface.co
+   - Go to Settings → Access Tokens: https://huggingface.co/settings/tokens
+   - Click "New token"
+   - Enter token name (e.g., "speech-recognition")
+   - Select role "Read"
+   - Click "Generate token"
+   - Copy the token (you'll need it later)
+
+3. **Accept model usage terms:**
+   Go to these pages and click "Accept":
+   - https://huggingface.co/pyannote/speaker-diarization
+   - https://huggingface.co/pyannote/segmentation
+   - https://huggingface.co/pyannote/embedding
 
 ### 🇷🇺 Быстрый запуск
 1. Клонируйте репозиторий:
 ```bash
-git clone <repository-url>
+git clone https://github.com/biguxuzz/VoskRecognition.git
 cd VoskRecognition
 ```
 
@@ -78,7 +128,7 @@ docker-compose up --build
 ### 🇬🇧 Quick Start
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/biguxuzz/VoskRecognition.git
 cd VoskRecognition
 ```
 
@@ -109,20 +159,6 @@ docker-compose up --build
 - `HF_TOKEN` - Hugging Face token for model access
 - `UPLOAD_FOLDER` - folder for uploaded files
 - `RESULT_FOLDER` - folder for results
-
----
-
-## 🧪 Тестирование / Testing
-
-### 🇷🇺 Запуск тестов
-```bash
-docker-compose exec web pytest
-```
-
-### 🇬🇧 Running Tests
-```bash
-docker-compose exec web pytest
-```
 
 ---
 
