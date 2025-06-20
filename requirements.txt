@@ -1,8 +1,6 @@
 flask==2.0.1
 werkzeug==2.0.3
 openai-whisper
-torch
-torchaudio
 numpy>=2.0.0
 pandas
 transformers
@@ -11,7 +9,7 @@ pytest==6.2.5
 selenium==3.141.0
 pytest-flask==1.2.0
 wget==3.2
-# torch и связанные пакеты будут установлены отдельно в Dockerfile
+# torch и torchaudio устанавливаются отдельно как CPU версии в Dockerfile
 pyannote.audio>=3.1.1
 python-dotenv==1.0.0
 speechbrain>=1.0.0 

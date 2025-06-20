@@ -25,14 +25,9 @@ class SpeechRecognizer:
             return
             
         self.initialized = True
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        
-        # Проверяем доступность CUDA
-        if torch.cuda.is_available():
-            logger.info(f"Using GPU: {torch.cuda.get_device_name(0)}")
-            logger.info(f"GPU Memory: {torch.cuda.get_device_properties(0).total_memory / 1024**3:.1f} GB")
-        else:
-            logger.warning("CUDA is not available. Speech recognition will be slow!")
+        # Принудительно используем CPU для совместимости
+        self.device = "cpu"
+        logger.info("Using CPU for speech recognition")
         
         try:
             if SpeechRecognizer._model is None:
@@ -46,17 +41,9 @@ class SpeechRecognizer:
                 SpeechRecognizer._model = whisper.load_model("medium")
                 logger.info(f"Initial model device: {next(SpeechRecognizer._model.parameters()).device}")
                 
-                # Переносим на GPU если доступно
-                if self.device == "cuda":
-                    SpeechRecognizer._model = SpeechRecognizer._model.cuda()
-                    logger.info(f"Model device after cuda(): {next(SpeechRecognizer._model.parameters()).device}")
-                    
-                    # Проверяем доступные параметры decode
-                    try:
-                        from whisper.decoding import DecodingOptions
-                        logger.info(f"DecodingOptions parameters: {inspect.signature(DecodingOptions.__init__)}")
-                    except Exception as e:
-                        logger.warning(f"Could not inspect DecodingOptions: {e}")
+                # Убеждаемся, что модель на CPU
+                SpeechRecognizer._model = SpeechRecognizer._model.cpu()
+                logger.info(f"Model device after cpu(): {next(SpeechRecognizer._model.parameters()).device}")
                 
                 logger.info(f"Model loaded in {time.time() - start_time:.2f} seconds")
                 
@@ -91,10 +78,6 @@ class SpeechRecognizer:
 
             start_time = time.time()
             
-            # Проверяем использование GPU
-            if self.device == "cuda":
-                logger.info(f"GPU Memory before transcription: {torch.cuda.memory_allocated() / 1024**2:.1f} MB")
-            
             # Получаем длительность аудио
             audio_info = sf.info(audio_path)
             total_duration = audio_info.duration
@@ -127,17 +110,13 @@ class SpeechRecognizer:
                 logger.info("Starting progress thread")
                 progress_thread.start()
 
-            # Запускаем распознавание без параметра device
+            # Запускаем распознавание для CPU (fp16=False)
             result = self.model.transcribe(
                 audio_path,
                 language="ru",
                 task="transcribe",
-                fp16=(self.device == "cuda")
+                fp16=False  # Отключаем fp16 для CPU
             )
-            
-            if self.device == "cuda":
-                logger.info(f"GPU Memory after transcription: {torch.cuda.memory_allocated() / 1024**2:.1f} MB")
-                torch.cuda.empty_cache()
             
             # Форматируем результат с тайм-кодами
             transcription = []

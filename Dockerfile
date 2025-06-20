@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
+FROM ubuntu:22.04
 
 # Установка Python и системных зависимостей
 RUN apt-get update && apt-get install -y \
@@ -17,6 +17,9 @@ RUN mkdir -p /tmp/uploads /tmp/results /app/models
 # Копирование и установка requirements.txt
 COPY --chmod=0644 requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Установка CPU версии PyTorch
+RUN pip3 install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 # Копирование исходного кода с правильными правами
 COPY --chmod=0755 ./app /app/app/
@@ -39,5 +42,10 @@ EXPOSE 5000
 ENV PYTHONUNBUFFERED=1
 ENV FLASK_APP=app.main
 ENV FLASK_ENV=development
+
+# Принудительно отключаем CUDA
+ENV CUDA_VISIBLE_DEVICES=""
+ENV PYTORCH_CUDA_ALLOC_CONF=""
+ENV CUDA_LAUNCH_BLOCKING=""
 
 CMD ["python3", "-m", "app.main"] 

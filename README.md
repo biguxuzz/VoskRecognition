@@ -22,7 +22,7 @@
   2. Распознавание спикеров
 - Прогресс-бар обработки с отображением этапов
 - Скачивание результата в `.txt` с указанием говорящих
-- Запуск в `Docker` с поддержкой GPU
+- Запуск в `Docker` с поддержкой CPU
 - REST API (если применимо)
 - Автоматические тесты
 
@@ -30,47 +30,115 @@
 - Upload multiple large files (`.wav`, `.mp3`, `.mp4`)
 - Ability to change file order before merging
 - Automatic merging of multiple files into one
-- Automatic audio conversion to `.wav`
+- Automatic audio conversion to `.wav` format
 - Two-stage recognition:
   1. Speech transcription with timestamps
   2. Speaker recognition
 - Processing progress bar with stage display
-- Download result in `.txt` with speaker identification
-- Deployment in `Docker` with GPU support
+- Download result in `.txt` with speaker indication
+- Docker deployment with CPU support
 - REST API (if applicable)
-- Automated tests
+- Automatic tests
 
 ---
 
-## 🛠️ Установка и запуск / Installation & Run
+## 🛠️ Установка и запуск / Installation and Setup
 
-### 🇷🇺 Установка
+### 🇷🇺 Требования
+- Docker и Docker Compose
+- Минимум 4GB RAM
+- Процессор с поддержкой AVX2 (для оптимальной производительности)
+
+### 🇬🇧 Requirements
+- Docker and Docker Compose
+- Minimum 4GB RAM
+- CPU with AVX2 support (for optimal performance)
+
+### 🇷🇺 Быстрый запуск
+1. Клонируйте репозиторий:
 ```bash
-# Клонировать репозиторий
-git clone https://github.com/biguxuzz/VoskRecognition.git
+git clone <repository-url>
 cd VoskRecognition
+```
 
-# Собрать и запустить контейнер Docker
+2. Создайте файл `.env` с необходимыми переменными:
+```bash
+HF_TOKEN=your_huggingface_token_here
+UPLOAD_FOLDER=/data/uploads
+RESULT_FOLDER=/data/results
+```
+
+3. Запустите приложение:
+```bash
 docker-compose up --build
 ```
 
-### 🇬🇧 Installation
-```bash
-# Clone repository
-git clone https://github.com/biguxuzz/VoskRecognition.git
-cd VoskRecognition
+4. Откройте браузер и перейдите по адресу: `http://localhost:5000`
 
-# Build and run Docker container
+### 🇬🇧 Quick Start
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd VoskRecognition
+```
+
+2. Create `.env` file with required variables:
+```bash
+HF_TOKEN=your_huggingface_token_here
+UPLOAD_FOLDER=/data/uploads
+RESULT_FOLDER=/data/results
+```
+
+3. Start the application:
+```bash
 docker-compose up --build
+```
+
+4. Open your browser and go to: `http://localhost:5000`
+
+---
+
+## 📋 Конфигурация / Configuration
+
+### 🇷🇺 Переменные окружения
+- `HF_TOKEN` - токен Hugging Face для доступа к моделям
+- `UPLOAD_FOLDER` - папка для загруженных файлов
+- `RESULT_FOLDER` - папка для результатов
+
+### 🇬🇧 Environment Variables
+- `HF_TOKEN` - Hugging Face token for model access
+- `UPLOAD_FOLDER` - folder for uploaded files
+- `RESULT_FOLDER` - folder for results
+
+---
+
+## 🧪 Тестирование / Testing
+
+### 🇷🇺 Запуск тестов
+```bash
+docker-compose exec web pytest
+```
+
+### 🇬🇧 Running Tests
+```bash
+docker-compose exec web pytest
 ```
 
 ---
 
-## 📜 Лицензия / License
+## 📝 Лицензия / License
 
-Этот проект распространяется под лицензией **GPL-3.0**. Полный текст лицензии можно найти в файле [LICENSE](LICENSE).
+Этот проект распространяется под лицензией **GPL-3.0**. См. файл `LICENSE` для подробностей.
 
-This project is licensed under **GPL-3.0**. The full text of the license is available in the [LICENSE](LICENSE) file.
+This project is distributed under the **GPL-3.0** license. See the `LICENSE` file for details.
+
+---
+
+## 🤝 Вклад в проект / Contributing
+
+Мы приветствуем вклады в проект! Пожалуйста, создавайте issues и pull requests.
+
+We welcome contributions to the project! Please create issues and pull requests.
 
 ---
 

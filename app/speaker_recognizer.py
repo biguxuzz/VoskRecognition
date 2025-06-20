@@ -26,17 +26,20 @@ class SpeakerRecognizer:
             return
             
         self.initialized = True
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # Принудительно используем CPU для совместимости
+        self.device = torch.device("cpu")
         logger.info(f"Speaker recognizer using device: {self.device}")
         
         self.hf_token = os.getenv('HF_TOKEN')
         if not self.hf_token:
+            logger.error("HF_TOKEN не установлен в переменных окружения")
             raise ValueError("HF_TOKEN не установлен в переменных окружения")
             
         logger.info("Logging in to Hugging Face...")
         try:
             # Явная авторизация в Hugging Face
             login(token=self.hf_token)
+            logger.info("Successfully logged in to Hugging Face")
             
             # Проверяем доступ к необходимым моделям
             api = HfApi()
@@ -49,6 +52,7 @@ class SpeakerRecognizer:
             for model in models_to_check:
                 try:
                     api.model_info(model)
+                    logger.info(f"Access confirmed for {model}")
                 except Exception as e:
                     logger.error(f"No access to {model}. Please visit https://huggingface.co/{model} "
                                f"and accept the user conditions.")
@@ -57,30 +61,63 @@ class SpeakerRecognizer:
             
             if SpeakerRecognizer._pipeline is None:
                 logger.info("Initializing speaker recognition pipeline...")
+                
+                # Принудительно отключаем CUDA для pyannote.audio
+                os.environ['CUDA_VISIBLE_DEVICES'] = ''
+                torch.cuda.is_available = lambda: False
+                
                 SpeakerRecognizer._pipeline = Pipeline.from_pretrained(
                     "pyannote/speaker-diarization",
                     use_auth_token=self.hf_token
                 )
-                # Явно переносим на GPU
+                
+                # Явно переносим на CPU
                 SpeakerRecognizer._pipeline = SpeakerRecognizer._pipeline.to(self.device)
                 
-                if str(self.device) == "cuda":
-                    torch.cuda.empty_cache()
+                logger.info("Pipeline moved to CPU successfully")
+                
+                # Безопасная проверка устройства pipeline
+                try:
+                    # Проверяем, есть ли у pipeline атрибут device
+                    if hasattr(SpeakerRecognizer._pipeline, 'device'):
+                        logger.info(f"Pipeline device: {SpeakerRecognizer._pipeline.device}")
+                    else:
+                        logger.info("Pipeline device: CPU (default)")
+                except Exception as e:
+                    logger.warning(f"Could not determine pipeline device: {e}")
+                    logger.info("Pipeline device: CPU (assumed)")
             
             self.pipeline = SpeakerRecognizer._pipeline
             logger.info("Speaker recognition initialized successfully")
+            
         except Exception as e:
-            logger.error(f"Failed to initialize pipeline: {str(e)}")
+            logger.error(f"Failed to initialize pipeline: {str(e)}", exc_info=True)
             raise
         
     def recognize_speakers(self, audio_path, progress_callback=None):
         """Распознает спикеров в аудиофайле"""
         try:
             logger.info(f"Starting speaker recognition for {audio_path}")
+            
+            # Проверяем существование файла
+            if not os.path.exists(audio_path):
+                logger.error(f"Audio file not found: {audio_path}")
+                return []
+                
+            # Проверяем размер файла
+            file_size = os.path.getsize(audio_path)
+            logger.info(f"Audio file size: {file_size} bytes")
+            
+            if file_size == 0:
+                logger.error("Audio file is empty")
+                return []
+            
             start_time = time.time()
             
             # Применяем диаризацию
+            logger.info("Running diarization pipeline...")
             diarization = self.pipeline(audio_path)
+            logger.info("Diarization completed")
             
             # Преобразуем результаты в удобный формат
             speakers = []
@@ -91,7 +128,9 @@ class SpeakerRecognizer:
                     'speaker': f"SPEAKER_{speaker[-1]}"  # Упрощаем имена спикеров
                 })
             
-            logger.info(f"Found {len(set(s['speaker'] for s in speakers))} unique speakers")
+            unique_speakers = set(s['speaker'] for s in speakers)
+            logger.info(f"Found {len(unique_speakers)} unique speakers: {list(unique_speakers)}")
+            logger.info(f"Total speaker segments: {len(speakers)}")
             logger.info(f"Speaker recognition completed in {time.time() - start_time:.2f} seconds")
             
             if progress_callback:
@@ -100,5 +139,6 @@ class SpeakerRecognizer:
             return speakers
             
         except Exception as e:
-            logger.error(f"Ошибка при распознавании спикеров: {str(e)}")
+            logger.error(f"Ошибка при распознавании спикеров: {str(e)}", exc_info=True)
+            logger.warning("Returning empty speaker list due to error")
             return [] 

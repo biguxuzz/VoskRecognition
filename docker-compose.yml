@@ -11,21 +11,8 @@ services:
       - ./app:/app/app
       - whisper_data:/data
       - whisper_cache:/root/.cache/whisper
-    runtime: nvidia
     env_file:
       - .env
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
-      - CUDA_VISIBLE_DEVICES=0
-      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
-      - CUDA_LAUNCH_BLOCKING=1
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu, compute, utility]
     restart: unless-stopped
 
 volumes:
