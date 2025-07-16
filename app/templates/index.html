@@ -9,6 +9,7 @@
                 <img src="{{ url_for('static', filename='images/upload.svg') }}" alt="Загрузить">
                 <p>Перетащите файлы сюда или <span class="browse-link">выберите файлы</span></p>
                 <p class="file-types">Поддерживаемые форматы: WAV, MP3, MP4</p>
+                <p class="file-size-limit">Максимальный размер файла: 1GB</p>
             </div>
         </form>
     </div>
@@ -144,8 +145,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Обработка файлов
     function handleFiles(files) {
+        const maxSize = 1024 * 1024 * 1024; // 1GB
+        
         Array.from(files).forEach(file => {
             if (file.type.startsWith('audio/') || file.type.startsWith('video/')) {
+                // Проверяем размер файла
+                if (file.size > maxSize) {
+                    alert(`Файл "${file.name}" слишком большой. Размер: ${(file.size / (1024*1024)).toFixed(1)}MB, Максимум: 1GB`);
+                    return;
+                }
                 uploadFile(file);
             }
         });
@@ -160,7 +168,12 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            if (response.status === 413) {
+                throw new Error('Файл слишком большой. Максимальный размер: 1GB');
+            }
+            return response.json();
+        })
         .then(data => {
             if (data.error) {
                 alert(data.error);
@@ -175,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Ошибка при загрузке файла');
+            alert(error.message || 'Ошибка при загрузке файла');
         });
     }
 

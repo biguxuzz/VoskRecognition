@@ -1,12 +1,13 @@
 import os
 import logging
+import time
 from flask import Flask, request, render_template, jsonify, send_file
 from werkzeug.utils import secure_filename
 from app.audio_processor import AudioProcessor
 from app.speech_recognizer import SpeechRecognizer
 from app.config import Config
 import uuid
-from .transcription_manager import TranscriptionManager
+from .speaker_first_transcription_manager import SpeakerFirstTranscriptionManager
 import threading
 
 # Настраиваем логирование
@@ -55,6 +56,18 @@ def upload_file():
             return jsonify({'error': 'Файл не выбран'}), 400
         
         if file and allowed_file(file.filename):
+            # Проверяем размер файла
+            file.seek(0, 2)  # Перемещаемся в конец файла
+            file_size = file.tell()  # Получаем размер
+            file.seek(0)  # Возвращаемся в начало
+            
+            max_size = app.config['MAX_CONTENT_LENGTH']
+            if file_size > max_size:
+                logger.warning(f'File too large: {file_size} bytes (max: {max_size})')
+                return jsonify({
+                    'error': f'Файл слишком большой. Размер: {file_size / (1024*1024):.1f}MB, Максимум: {max_size / (1024*1024):.1f}MB'
+                }), 413
+            
             # Добавляем уникальный идентификатор к имени файла
             unique_id = str(uuid.uuid4())
             original_filename = secure_filename(file.filename)
@@ -157,18 +170,24 @@ def recognize():
             'progress': 0,
             'status': 'processing',
             'current_file': 0,
-            'total_files': len(files)
+            'total_files': len(files),
+            'created_at': time.time(),
+            'last_update': time.time()
         }
         logger.info(f'Created task {task_id} for {len(files)} files')
 
         def process_files():
             try:
+                logger.info(f'Starting background processing for task {task_id}')
+                
                 # Собираем полные пути к файлам
                 file_paths = [os.path.join(app.config['UPLOAD_FOLDER'], filename) for filename in files]
+                logger.info(f'File paths: {file_paths}')
                 
                 # Создаем имя для объединенного файла
                 merged_filename = f'merged_{uuid.uuid4()}.wav'
                 merged_path = os.path.join(app.config['UPLOAD_FOLDER'], merged_filename)
+                logger.info(f'Will merge files into: {merged_path}')
                 
                 # Объединяем файлы
                 logger.info(f'Merging {len(file_paths)} files into {merged_path}')
@@ -185,12 +204,14 @@ def recognize():
                 
                 # Распознаем речь
                 logger.info('Starting transcription of merged file')
-                transcription_manager = TranscriptionManager()
+                transcription_manager = SpeakerFirstTranscriptionManager()
                 
                 def update_progress(progress):
                     # Корректируем прогресс: 20% за объединение + 80% за распознавание
                     adjusted_progress = 20 + int(progress * 0.8)
                     tasks_status[task_id]['progress'] = adjusted_progress
+                    tasks_status[task_id]['last_update'] = time.time()
+                    logger.info(f'Task {task_id} progress: {adjusted_progress}% (raw: {progress}%)')
                 
                 text = transcription_manager.process_audio(merged_path, update_progress)
                 
@@ -252,10 +273,64 @@ def recognize():
 @app.route('/status/<task_id>')
 def get_status(task_id):
     """Получение статуса обработки"""
+    logger.info(f'Status request for task {task_id}')
+    
     if task_id not in tasks_status:
+        logger.warning(f'Task {task_id} not found in tasks_status')
         return jsonify({'error': 'Задача не найдена'}), 404
     
-    return jsonify(tasks_status[task_id])
+    status = tasks_status[task_id]
+    logger.info(f'Task {task_id} status: {status}')
+    return jsonify(status)
+
+@app.route('/tasks')
+def get_all_tasks():
+    """Получение списка всех задач"""
+    logger.info('Request for all tasks')
+    
+    tasks_list = []
+    for task_id, status in tasks_status.items():
+        task_info = {
+            'task_id': task_id,
+            'status': status.get('status', 'unknown'),
+            'progress': status.get('progress', 0),
+            'total_files': status.get('total_files', 0),
+            'current_file': status.get('current_file', 0)
+        }
+        
+        # Добавляем время последнего обновления
+        if 'last_update' not in status:
+            status['last_update'] = time.time()
+        task_info['last_update'] = status['last_update']
+        
+        tasks_list.append(task_info)
+    
+    logger.info(f'Returning {len(tasks_list)} tasks')
+    return jsonify(tasks_list)
+
+@app.route('/cancel/<task_id>', methods=['POST'])
+def cancel_task(task_id):
+    """Отмена задачи"""
+    logger.info(f'Cancel request for task {task_id}')
+    
+    if task_id not in tasks_status:
+        logger.warning(f'Task {task_id} not found in tasks_status')
+        return jsonify({'error': 'Задача не найдена'}), 404
+    
+    current_status = tasks_status[task_id]
+    if current_status.get('status') in ['completed', 'error']:
+        logger.warning(f'Task {task_id} is already {current_status["status"]}')
+        return jsonify({'error': f'Задача уже {current_status["status"]}'}), 400
+    
+    # Помечаем задачу как отмененную
+    tasks_status[task_id].update({
+        'status': 'cancelled',
+        'error': 'Задача отменена пользователем',
+        'last_update': time.time()
+    })
+    
+    logger.info(f'Task {task_id} cancelled successfully')
+    return jsonify({'message': 'Задача отменена'})
 
 @app.route('/download/<filename>')
 def download_result(filename):
@@ -282,6 +357,14 @@ def download_result(filename):
     except Exception as e:
         logger.error(f'Error in download_result: {str(e)}')
         return jsonify({'error': str(e)}), 500
+
+@app.errorhandler(413)
+def too_large(e):
+    """Обработчик ошибки превышения размера файла"""
+    logger.warning(f'File too large error: {str(e)}')
+    return jsonify({
+        'error': 'Файл слишком большой. Максимальный размер: 1GB'
+    }), 413
 
 if __name__ == '__main__':
     logger.info('Starting Flask application')

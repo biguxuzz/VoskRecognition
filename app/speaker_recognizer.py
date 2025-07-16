@@ -114,12 +114,83 @@ class SpeakerRecognizer:
             
             start_time = time.time()
             
-            # Применяем диаризацию
+            # Применяем диаризацию с детальным логированием
             logger.info("Running diarization pipeline...")
-            diarization = self.pipeline(audio_path)
-            logger.info("Diarization completed")
+            logger.info("Step 1: Loading audio file...")
+            if progress_callback:
+                progress_callback(10)
+            
+            # Добавляем логирование для отслеживания прогресса
+            logger.info("Step 2: Processing audio through pipeline...")
+            if progress_callback:
+                progress_callback(20)
+            
+            # Запускаем pipeline с таймаутом и логированием
+            pipeline_start = time.time()
+            logger.info(f"Pipeline started at {pipeline_start}")
+            
+            # Добавляем промежуточные логи каждые 30 секунд
+            def log_progress():
+                elapsed = time.time() - pipeline_start
+                logger.info(f"Pipeline running for {elapsed:.1f} seconds...")
+                if progress_callback:
+                    # Обновляем прогресс от 20% до 80% во время работы pipeline
+                    progress = 20 + min(60, int(elapsed / 30) * 10)  # +10% каждые 30 секунд
+                    progress_callback(progress)
+            
+            # Запускаем логирование прогресса в отдельном потоке
+            import threading
+            progress_thread = threading.Thread(target=lambda: self._log_progress_periodically(pipeline_start, progress_callback))
+            progress_thread.daemon = True
+            progress_thread.start()
+            
+            try:
+                # Добавляем таймаут для pipeline (максимум 30 минут) с использованием threading
+                import threading
+                import queue
+                
+                result_queue = queue.Queue()
+                exception_queue = queue.Queue()
+                
+                def run_pipeline():
+                    try:
+                        result = self.pipeline(audio_path)
+                        result_queue.put(result)
+                    except Exception as e:
+                        exception_queue.put(e)
+                
+                # Запускаем pipeline в отдельном потоке
+                pipeline_thread = threading.Thread(target=run_pipeline)
+                pipeline_thread.daemon = True
+                pipeline_thread.start()
+                
+                # Ждем результат с таймаутом
+                try:
+                    diarization = result_queue.get(timeout=1800)  # 30 минут таймаут
+                    logger.info("Diarization completed successfully")
+                except queue.Empty:
+                    logger.error("Pipeline timed out after 30 minutes")
+                    raise TimeoutError("Pipeline timeout after 30 minutes")
+                except Exception as e:
+                    # Проверяем, есть ли исключение в очереди
+                    try:
+                        pipeline_exception = exception_queue.get_nowait()
+                        raise pipeline_exception
+                    except queue.Empty:
+                        raise e
+                    
+            except Exception as e:
+                logger.error(f"Pipeline failed after {time.time() - pipeline_start:.1f} seconds: {str(e)}")
+                raise
+            
+            pipeline_end = time.time()
+            logger.info(f"Pipeline completed in {pipeline_end - pipeline_start:.2f} seconds")
+            
+            if progress_callback:
+                progress_callback(80)
             
             # Преобразуем результаты в удобный формат
+            logger.info("Step 3: Processing diarization results...")
             speakers = []
             for turn, _, speaker in diarization.itertracks(yield_label=True):
                 speakers.append({
@@ -141,4 +212,16 @@ class SpeakerRecognizer:
         except Exception as e:
             logger.error(f"Ошибка при распознавании спикеров: {str(e)}", exc_info=True)
             logger.warning("Returning empty speaker list due to error")
-            return [] 
+            return []
+    
+    def _log_progress_periodically(self, start_time, progress_callback):
+        """Логирует прогресс каждые 30 секунд"""
+        import time
+        while True:
+            time.sleep(30)
+            elapsed = time.time() - start_time
+            logger.info(f"Pipeline still running... Elapsed time: {elapsed:.1f} seconds")
+            if progress_callback:
+                # Обновляем прогресс от 20% до 80% во время работы pipeline
+                progress = 20 + min(60, int(elapsed / 30) * 10)  # +10% каждые 30 секунд
+                progress_callback(progress) 

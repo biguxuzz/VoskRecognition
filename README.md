@@ -17,9 +17,10 @@
 - Возможность изменения порядка файлов перед объединением
 - Автоматическое объединение нескольких файлов в один
 - Автоматическая конвертация аудио в формат `.wav`
-- Двухэтапное распознавание:
-  1. Транскрибация речи с таймкодами
-  2. Распознавание спикеров
+- **Новый подход с приоритетом спикеров:**
+  1. Сначала определяется сегментация спикеров с точными таймингами
+  2. Затем каждый сегмент транскрибируется отдельно
+  3. Результат объединяется с сохранением точных границ времени
 - Прогресс-бар обработки с отображением этапов
 - Скачивание результата в `.txt` с указанием говорящих
 - Запуск в `Docker` с поддержкой CPU
@@ -31,14 +32,45 @@
 - Ability to change file order before merging
 - Automatic merging of multiple files into one
 - Automatic audio conversion to `.wav` format
-- Two-stage recognition:
-  1. Speech transcription with timestamps
-  2. Speaker recognition
+- **New speaker-first approach:**
+  1. Speaker segmentation with precise timings is determined first
+  2. Each segment is then transcribed separately
+  3. Results are merged while preserving exact time boundaries
 - Processing progress bar with stage display
 - Download result in `.txt` with speaker indication
 - Docker deployment with CPU support
 - REST API (if applicable)
 - Automatic tests
+
+---
+
+## 🔄 Новый подход с приоритетом спикеров / New Speaker-First Approach
+
+### 🇷🇺 Преимущества нового подхода
+- **Точность таймингов**: Каждый сегмент транскрибируется отдельно, что обеспечивает точные границы времени
+- **Лучшее качество распознавания**: Короткие сегменты часто распознаются лучше, чем длинные
+- **Четкое разделение спикеров**: Нет смешивания речи разных спикеров в одном сегменте
+- **Fallback механизм**: Если не удается определить спикеров, система автоматически переключается на полную транскрибацию
+
+### 🇬🇧 Benefits of the new approach
+- **Timing accuracy**: Each segment is transcribed separately, ensuring precise time boundaries
+- **Better recognition quality**: Short segments are often recognized better than long ones
+- **Clear speaker separation**: No mixing of different speakers' speech in one segment
+- **Fallback mechanism**: If speaker detection fails, the system automatically switches to full transcription
+
+### 🇷🇺 Тестирование нового подхода
+```bash
+python test_speaker_first_approach.py uploads/test_audio.wav
+```
+
+### 🇬🇧 Testing the new approach
+```bash
+python test_speaker_first_approach.py uploads/test_audio.wav
+```
+
+Подробная документация: [SPEAKER_FIRST_APPROACH.md](SPEAKER_FIRST_APPROACH.md)
+
+Detailed documentation: [SPEAKER_FIRST_APPROACH.md](SPEAKER_FIRST_APPROACH.md)
 
 ---
 
@@ -183,4 +215,3 @@ We welcome contributions to the project! Please create issues and pull requests.
 - **GitHub:** [biguxuzz](https://github.com/biguxuzz)
 - **Telegram:** [@biguxuzz](https://t.me/biguxuzz)
 - **Email:** gorp@1cgst.ru
-

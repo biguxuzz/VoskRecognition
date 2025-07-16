@@ -61,6 +61,18 @@ header {
     cursor: pointer;
 }
 
+.file-types {
+    color: #666;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.file-size-limit {
+    color: #888;
+    font-size: 12px;
+    margin-top: 5px;
+}
+
 .progress-container {
     margin-top: 2rem;
 }

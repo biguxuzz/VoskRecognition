@@ -52,4 +52,33 @@ class AudioProcessor:
         except subprocess.CalledProcessError as e:
             raise Exception(f"Ошибка объединения файлов: {e.stderr.decode()}")
         except Exception as e:
-            raise Exception(f"Ошибка при объединении файлов: {str(e)}") 
+            raise Exception(f"Ошибка при объединении файлов: {str(e)}")
+
+    def extract_segment(self, input_path, output_path, start_time, duration):
+        """
+        Извлекает сегмент аудио из основного файла
+        
+        Args:
+            input_path: путь к входному аудио файлу
+            output_path: путь для сохранения сегмента
+            start_time: время начала сегмента в секундах
+            duration: длительность сегмента в секундах
+        """
+        try:
+            command = [
+                'ffmpeg', '-i', input_path,
+                '-ss', str(start_time),
+                '-t', str(duration),
+                '-acodec', 'pcm_s16le',
+                '-ar', '16000',
+                '-ac', '1',
+                '-y', output_path
+            ]
+            
+            subprocess.run(command, check=True, capture_output=True)
+            return output_path
+            
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Ошибка извлечения сегмента: {e.stderr.decode()}")
+        except Exception as e:
+            raise Exception(f"Ошибка при извлечении сегмента: {str(e)}") 
